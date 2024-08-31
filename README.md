@@ -11,3 +11,7 @@ install the requirements by
 typing pip install requirements.txt
 
 then run the script by typing python Eth_cracking_machine.py
+
+more detailed instructions on 
+this video below https://youtu.be/BFlK0zLghwM?si=WAEJgOzy3k8ADQMN
+
