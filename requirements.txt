@@ -1,0 +1,4 @@
+requests
+cryptofuzz
+mnemonic
+rich
