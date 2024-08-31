@@ -10,4 +10,4 @@ after cloning the repository
 install the requirements by 
 typing pip install requirements.txt
 
-then run the script by typing python Eth_cracking_machine
+then run the script by typing python Eth_cracking_machine.py
