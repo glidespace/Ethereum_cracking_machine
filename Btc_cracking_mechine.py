@@ -6,84 +6,83 @@ from rich.console import Console
 from bitcoinlib.keys import HDKey
 from mnemonic import Mnemonic
 import requests
-import concurrent.futures as cf
 
 console = Console()
 
-# Function to get the balance of a Bitcoin address
-def get_balance(addr: str):
-    url = f"https://blockchain.info/q/addressbalance/{addr}"
+# Variables to track stats
+wallets_checked = 0
+btc_found_count = 0
+btc_found_total = 0
+
+# Function to check Bitcoin balance using blockchain.info API
+def get_balance(address):
+    url = f"https://blockchain.info/q/addressbalance/{address}"
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            # Balance is returned in satoshis; convert to BTC
-            return int(response.text) / 1e8
+            return int(response.text) / 1e8  # Convert satoshi to BTC
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching balance: {e}")
+        print(f"Error fetching balance for {address}: {e}")
     return 0
 
-# Function to generate a Bitcoin wallet
+# Function to generate a random Bitcoin wallet (address and private key)
 def generate_bitcoin_wallet():
     mne = Mnemonic("english")
     words = mne.generate(strength=random.choice([128, 256]))
     seed = mne.to_seed(words)
-
-    # Generate Bitcoin HD Key from the seed
+    
+    # Generate HD Key from seed and derive address and private key
     hd_key = HDKey.from_seed(seed, network='bitcoin')
-    addr = hd_key.address()  # Get Bitcoin address from HD Key
-    priv = hd_key.private_hex  # Get private key in hex format
+    address = hd_key.address()
+    private_key = hd_key.private_hex
+    
+    return address, private_key, words
 
-    return addr, priv, words
+# Main function to check wallets
+def check_wallets():
+    global wallets_checked, btc_found_count, btc_found_total
 
-def check_bitcoin_wallet():
-    z = 1
-    w = 0
     while True:
-        z += 1
-        start_time = time.time()
+        # Generate wallet and check balance
+        address, private_key, words = generate_bitcoin_wallet()
+        balance = get_balance(address)
         
-        # Generate wallet and fetch balance
-        addr, priv, words = generate_bitcoin_wallet()
-        balance = get_balance(addr)
+        # Update stats
+        wallets_checked += 1
+        if balance > 0:
+            btc_found_count += 1
+            btc_found_total += balance
+
+            # Save the wallet with balance to a file
+            with open("Found_BTC_Wallets.txt", "a") as f:
+                f.write(f"Address     : {address}\n")
+                f.write(f"Private Key : {private_key}\n")
+                f.write(f"Mnemonic    : {words}\n")
+                f.write(f"Balance     : {balance} BTC\n")
+                f.write("------------\n")
         
-        end_time = time.time()
-        timer = end_time - start_time
-        
-        # Format the output using rich
+        # Display the stats using rich
+        console.clear()
         panel_content = (
-            f"[gold1 on grey15]Total Checked: [orange_red1]{z}[/]"
-            f"[gold1 on grey15] Wins: [white]{w}[/]"
-            f"[gold1 on grey15] Time: [white]{timer:.2f}s[/]"
-            f"[gold1] Balance: [aqua]{balance:.8f} BTC[/]"
-            f"[gold1 on grey15] Address: [white]{addr}[/]"
-            f"[gold1 on grey15] Private Key: [white]{priv}[/]"
-            f"[gold1 on grey15] Mnemonic: [white]{words}[/]"
+            f"[gold1]Wallets Checked[/]: [cyan]{wallets_checked}\n"
+            f"[gold1]BTC Found Count[/]: [cyan]{btc_found_count}\n"
+            f"[gold1]BTC Found Total[/]: [cyan]{btc_found_total:.8f} BTC ($...)"  # Update BTC to USD manually
         )
         style = "gold1 on grey11"
         console.print(
             Panel(
-                panel_content, 
-                title="[white]Bitcoin Mnemonic Generator[/]", 
-                subtitle="[green_yellow blink] Mmdrza.Com [/]", 
+                panel_content,
+                title="[white]Bitcoin Wallet Checker[/]",
+                subtitle="Real-time Stats",
                 style=style
             )
         )
-        
-        # Save winning wallets if balance is greater than zero
-        if balance > 0:
-            w += 1
-            with open('Winner___BTC___WalletWinner.txt', 'a') as f1:
-                f1.write(f"\nAddress     === {addr}")
-                f1.write(f"\nPrivateKey  === {priv}")
-                f1.write(f"\nMnemonic    === {words}")
-                f1.write(f"\nBalance     === {balance:.8f} BTC")
-                f1.write("\n            -------[ M M D R Z A . C o M ]-------      \n")
-        
-        # Pause slightly to respect API rate limits
-        time.sleep(0.1)
 
-if __name__ == '__main__':
-    # Set up a manageable number of threads to avoid overloading the Blockchain API
-    with cf.ThreadPoolExecutor(max_workers=50) as executor:
-        for _ in range(50):
-            executor.submit(check_bitcoin_wallet)
+        # Slow down the loop to avoid API rate limits
+        time.sleep(0.5)
+
+if __name__ == "__main__":
+    try:
+        check_wallets()
+    except KeyboardInterrupt:
+        print("\nScript interrupted.")
