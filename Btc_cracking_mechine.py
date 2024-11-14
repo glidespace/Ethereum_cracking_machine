@@ -60,26 +60,27 @@ def check_wallets():
                 f.write(f"Mnemonic    : {words}\n")
                 f.write(f"Balance     : {balance} BTC\n")
                 f.write("------------\n")
-        
-        # Display the stats using rich
-        console.clear()
+
+        # Display each wallet check in real-time using rich
         panel_content = (
-            f"[gold1]Wallets Checked[/]: [cyan]{wallets_checked}\n"
-            f"[gold1]BTC Found Count[/]: [cyan]{btc_found_count}\n"
-            f"[gold1]BTC Found Total[/]: [cyan]{btc_found_total:.8f} BTC ($...)"  # Update BTC to USD manually
+            f"[gold1]Checking Wallet[/]: {wallets_checked}\n"
+            f"[white]Address:[/]: [cyan]{address}\n"
+            f"[white]Private Key:[/]: [red]{private_key}\n"
+            f"[white]Mnemonic:[/]: [green]{' '.join(words.split()[:3])}... (truncated)\n"
+            f"[white]Balance:[/]: [yellow]{balance:.8f} BTC"
         )
-        style = "gold1 on grey11"
+        style = "bold green" if balance > 0 else "bold white"
         console.print(
             Panel(
                 panel_content,
-                title="[white]Bitcoin Wallet Checker[/]",
-                subtitle="Real-time Stats",
+                title="[blue]Bitcoin Wallet Checker[/]",
+                subtitle=f"[green]Wallets Checked: {wallets_checked}[/] | [gold]BTC Found: {btc_found_count} | BTC Total: {btc_found_total:.8f}[/]",
                 style=style
             )
         )
 
-        # Slow down the loop to avoid API rate limits
-        time.sleep(0.5)
+        # Slow down the loop to match the display speed in the image
+        time.sleep(1)  # Adjust this to control the speed (1 second per wallet here)
 
 if __name__ == "__main__":
     try:
