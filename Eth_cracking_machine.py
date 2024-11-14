@@ -14,11 +14,13 @@ console = Console()
 
 def getBal(addr: str):
     url = f"https://api.blockcypher.com/v1/eth/main/addrs/{addr}/balance"
-    req = requests.get(url)
-    if req.status_code == 200:
-        return req.json()["balance"]
-    else:
-        return 0
+    try:
+        req = requests.get(url)
+        if req.status_code == 200:
+            return req.json().get("balance", 0)
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching balance: {e}")
+    return 0
 
 def mmdrza():
     z = 1
@@ -30,22 +32,21 @@ def mmdrza():
         words = mne.generate(strength=random.choice([128, 256]))
         priv = conv.mne_to_hex(words)
         addr = eth.hex_addr(priv)
-        mixWord = words[:64]
         
         # Get balance using the BlockCypher API
-        bal = getBal(addr) / 1000000000000000000
+        bal = getBal(addr) / 1e18  # Convert from wei to ether
         end_time = time.time()
         timer = end_time - start_time
         
         # Format the output using rich
         MmdrzaPanel = (
-            '[gold1 on grey15]Total Checked: [orange_red1]' + str(z) + 
-            '[/][gold1 on grey15] Win:[white]' + str(w) + 
-            '[/][gold1 on grey15] Time: [white]' + str(timer) + 
-            '[/][gold1] Balance: [aqua]' + str(bal) + 
-            '[/][gold1 on grey15] Addr: [white] ' + str(addr) + 
-            '[/][gold1 on grey15] Private Key: [white]' + str(priv) + 
-            '[/][gold1 on grey15] Mnemonic: [white]' + str(words) + '[/]'
+            f"[gold1 on grey15]Total Checked: [orange_red1]{z}[/]"
+            f"[gold1 on grey15] Win:[white]{w}[/]"
+            f"[gold1 on grey15] Time: [white]{timer:.2f}[/]"
+            f"[gold1] Balance: [aqua]{bal:.5f}[/]"
+            f"[gold1 on grey15] Addr: [white]{addr}[/]"
+            f"[gold1 on grey15] Private Key: [white]{priv}[/]"
+            f"[gold1 on grey15] Mnemonic: [white]{words}[/]"
         )
         style = "gold1 on grey11"
         console.print(
@@ -61,12 +62,15 @@ def mmdrza():
         if bal > 0:
             w += 1
             with open('Winner___ETH___WalletWinner.txt', 'a') as f1:
-                f1.write('\nAddress     === ' + str(addr))
-                f1.write('\nPrivateKey  === ' + str(priv))
-                f1.write('\nMnemonic    === ' + str(words))
-                f1.write('\nBalance     === ' + str(bal))
-                f1.write('\n            -------[ M M D R Z A . C o M ]-------      \n')
-        
+                f1.write(f"\nAddress     === {addr}")
+                f1.write(f"\nPrivateKey  === {priv}")
+                f1.write(f"\nMnemonic    === {words}")
+                f1.write(f"\nBalance     === {bal:.5f}")
+                f1.write("\n            -------[ M M D R Z A . C o M ]-------      \n")
+        # Pause slightly to respect API rate limits
+        time.sleep(0.1)
+
 if __name__ == '__main__':
-    with cf.ThreadPoolExecutor(max_workers=7000) as executor:
-        executor.submit(mmdrza)
+    with cf.ThreadPoolExecutor(max_workers=50) as executor:  # Reduced number of workers for stability
+        for _ in range(50):  # Ensures multiple invocations within limits
+            executor.submit(mmdrza)
